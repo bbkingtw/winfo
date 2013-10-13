@@ -1,4 +1,4 @@
-style
+﻿style
   .block {
      float:left;
      width:180;
@@ -67,6 +67,7 @@ script(type='text/javascript').
   }
 
   function update_chart(sChart) {   
+    update_text(sChart);         
 
     parent=$('div#'+sChart);
     parent=d3.select('div#'+sChart); 
@@ -76,8 +77,6 @@ script(type='text/javascript').
       draw_chart2(sChart, parent, stype);
     else
       draw_chart1(sChart, parent, stype);
-
-    update_text(sChart);         
   }
 
   function prepareSVG(sChart,parent) {
