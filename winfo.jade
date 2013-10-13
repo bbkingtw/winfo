@@ -1,0 +1,336 @@
+style
+  .block {
+     float:left;
+     width:180;
+     //height:100;
+     border:2px dashed #003366; background-color:#ccccff, overflow:auto
+  }
+
+//script(type="text/javascript", src="./nicEdit.js")
+
+script(type='text/javascript', src="./socket.io/socket.io.js")
+script(type='text/javascript', src="http://d3js.org/d3.v3.min.js")
+script(type='text/javascript', src='http://code.jquery.com/jquery-latest.min.js')
+script(type='text/javascript').
+  charts=[];
+  svg_ww=150;
+  svg_hh=150;
+  xrandom=300;
+  bEditor=false;
+
+  function get_random_color() {
+    var letters = '0123456789ABCDEF'.split('');
+    var letters = 'ABCDEF'.split('');
+
+    var color = '#';
+    for (var i = 0; i < 6; i++ ) {
+        color += letters[Math.round(Math.random() * (letters.length-1))];
+    }
+    return color;
+  }
+
+  var socket = io.connect('http://localhost');
+  socket.on('news', function (data) {
+    alert(data);
+  });
+  socket.on('error', function (data) {
+    log('<font color=red>'+data+'</font>');
+  });
+
+  socket.on('response_chart', function (data) {
+    log(data);
+  });
+
+  socket.on('update_chart', function(data){
+    var sChart=data.chart;
+    if (!charts[sChart]) charts[sChart]=[];    
+    //var svg=prepareSVG(sChart, sContainer);    
+
+    if ($('div#'+data.chart).length==0) {
+      var area=$('<div>').attr('id',sChart).addClass('block').text(sChart).css('float','top');
+      area.css('background-color',get_random_color());
+      area.click(function(){$('input#chart').val(area.attr('id'));});
+      area.appendTo($('div#draw')); 
+    }
+    $('#'+sChart).append($('<div>').text('k='+data.key+',val='+data.val));
+
+    charts[sChart].push(data);        
+    update_chart(sChart);
+  });
+
+  function update_text(sChart) {
+    //return true;
+    $('#'+sChart).empty();
+    charts[sChart].forEach(function(d,i) {
+       $('#'+sChart).append($('<div>').text('k='+d.key+',val='+d.val));      
+    });  
+  }
+
+  function update_chart(sChart) {   
+
+    parent=$('div#'+sChart);
+    parent=d3.select('div#'+sChart); 
+    stype=$( "input:checked" ).val();
+
+    if ((stype.indexOf('line')>=0) || (stype.indexOf('poly')>=0))
+      draw_chart2(sChart, parent, stype);
+    else
+      draw_chart1(sChart, parent, stype);
+
+    update_text(sChart);         
+  }
+
+  function prepareSVG(sChart,parent) {
+    if ($('svg#'+sChart).length==0) {
+      var svg=parent
+       .append('svg:svg').attr('class','block')
+       .style('stroke','red').style('float','top')
+       .attr('id',sChart).attr('width',svg_ww).attr('height',svg_hh);      
+    }
+    return d3.select('svg#'+sChart);
+  }
+
+  function draw_chart2(sChart, sContainer, stype) {
+    var svg=prepareSVG(sChart, sContainer);
+
+    var lineData = [ 
+      { "x": 1,   "y": 5},  { "x": 20,  "y": 20},
+      { "x": 40,  "y": 10}, { "x": 60,  "y": 40},
+      { "x": 80,  "y": 5},  { "x": 100, "y": 60}
+    ];
+
+    var lineFunction1=d3.svg.line()
+      //.x(function(d) {return d.key})
+      .x(function(d,i) {return i*10})
+      .y(function(d) {return d.val}) 
+      .interpolate('linear')
+
+
+    svg.append('path')
+      .attr("d", lineFunction1(charts[sChart]))
+      //.attr("d", lineFunction2(charts[sChart]))
+      .attr('stroke','blue')
+      .attr('stroke-width',2)
+      .attr('fill','none')
+  }
+
+  function draw_chart1(sChart, sContainer, stype) {        
+    iHigh=charts[sChart].length-1;
+    //alert(iHigh);
+
+    var xMax=d3.entries(charts[sChart])
+      .sort(function(a,b){return d3.descending(a.key,b.key)})
+      [0]
+    var xMin=d3.entries(charts[sChart])
+      .sort(function(a,b){return d3.ascending(a.key,b.key)})
+      [0]      
+    
+    var xDomain=d3.extent(charts[sChart], function(d){return d.key})    
+    var yDomain=d3.extent(charts[sChart], function(d){return d.val})    
+    var xScale=d3.scale.linear().domain(xDomain).range([0, svg_ww])       
+    var yScale=d3.scale.linear().domain(yDomain).range([svg_hh, 0])       
+    
+    var xAxis=d3.svg.axis().scale(xScale).orient('bottom')
+    var yAxis=d3.svg.axis().scale(xScale).orient('left')    
+    
+    var margin = {top: 0, right: 0, bottom: 50, left: 30};
+    
+    var p=50
+    var svg=prepareSVG(sChart, sContainer); //要留著
+    
+    
+    svg.selectAll(stype).data(charts[sChart]).enter()
+      .append('svg:'+stype)
+      .attr('width',10).attr('height',10) //rect
+      .attr('r',5)			  //circle
+      .attr('rx',6).attr('ry',4)	  //ellipse	      
+
+      .attr('idx',function(d,i){return i;})        
+      .attr('x1', function(d,i){var x=charts[sChart][i].key; return xScale(x);})
+      .attr('x2', function(d,i){var y=charts[sChart][i].val; return yScale(y);})
+      .attr('y1', function(d,i){var x=charts[sChart][i+1<iHigh?i+1:0].key; return xScale(x);})//+150
+      .attr('y2', function(d,i){var y=charts[sChart][i+1<iHigh?i+1:0].val; return yScale(y);})
+
+      .attr('cx', function(d,i){var x=charts[sChart][i].key; return xScale(x);})//+50
+      .attr('cy', function(d,i){var y=charts[sChart][i].val; return yScale(y);})            
+      .attr( 'x', function(d,i){var x=charts[sChart][i].key; return xScale(x);})
+      .attr( 'y', function(d,i){var y=charts[sChart][i].val; return yScale(y);})
+      
+      .style('fill',function(d,i){return get_random_color();})
+      .style('stroke','black')
+      .style('stroke-width',2)
+      .on('click',function(){
+         var k=d3.select(this).attr('idx'); 
+         this.remove();         
+         charts[sChart].splice(k,1);         
+         update_chart(sChart);
+      })
+      .exit().remove()    
+  }
+
+  function xv(s) {
+    return JSON.stringify(s); 
+  }
+
+  function request_chart(x) {
+    socket.emit('request_chart',x);
+  }
+
+  function log(ss) {
+    var sTotal=$('#data').text();
+    //$('div').text(ss).prependTo($('#data'));
+    $('#data').append('<div>'+ss+'</div>')//text(sTotal+ss);
+  }
+
+  function gen_point(range, cb) {
+    for(var i=1; i<=range; i++) {
+       cb(i);
+    }
+  }
+
+  $(function(){
+    if(bEditor) 
+      bkLib.onDomLoaded(function() { nicEditors.allTextAreas() });
+
+    $('#req1').click(function(){
+      request_chart('1');
+      /*
+      gen_point(3,function(data){
+         log(data);
+      }); */
+    });
+
+    $('#req2').click(function(){
+       log(2);
+    });
+
+    $('#clear').click(function(){
+       $('svg').remove();
+       $('div.block').remove();
+       charts=[]
+    });
+
+    $('#draw_chart').click(function(){
+      var sChart=$('#chart').val();
+      update_chart(sChart);  	
+    });
+
+    function udp_request(host,port,data){
+       try {
+          data=JSON.stringify(data);
+       }
+       catch(e) {       
+          console.log('udp_request err='+e.message+' on '+data);
+       };
+
+       socket.emit('request_udp',{server:host, port:port, udp_data: data});
+    }
+
+    function tcp_request(host,port,data){
+       try {
+          data=JSON.stringify(data);
+       }
+       catch(e) {       
+          console.log('tcp_request err='+e.message+' on '+data);
+       };
+
+       socket.emit('request_tcp',{server:host, port:port, udp_data: data});
+    }
+
+
+    $('#udp_out').click(function(){
+       udp_request('127.0.0.1', '11111', $('input#udp').val());
+    });
+
+    $('#tcp_out').click(function(){
+       tcp_request($('#tcp_host').val(), $('#tcp_port').val(), $('#tcp_data').val());
+    });
+
+    $('#udp_object').click(function(){
+       var c=$('input#chart').val();
+       var k=Math.floor(Math.random()*xrandom);//svg_ww);
+       var v=Math.floor(Math.random()*xrandom);//vg_hh-10);
+
+       obj={
+         'request':'append_chart_data',
+         'parameter':{chart:c, key:k, val:v}
+       };
+       //alert(JSON.stringify(obj));
+
+       udp_request('127.0.0.1', '11111', obj);
+    });
+
+    $('#show_text').click(function(){      
+      s=$("div.nicEdit-main").html()
+      alert(s)
+    })
+
+    $('#append_point').click(function(){
+       var c=$('input#chart').val();
+       var k=$('#key').val();
+       var v=$('#val').val();
+       socket.emit('append_chart_data',{chart:c,key:k,val:v});
+    });
+
+    $('#append_random').click(function(){
+       for (var i=0; i<$('#range').val(); i++) {
+         var c=$('input#chart').val();
+         var k=Math.floor(Math.random()*xrandom);//svg_ww);
+         var v=Math.floor(Math.random()*xrandom);//svg_hh-10);
+         socket.emit('append_chart_data',{chart:c,key:k,val:v});
+       }
+    });
+    $('#append_random2').click(function(){
+       $('input#chart').val('ch_'+Math.floor(Math.random()*11));
+       $('#append_random').trigger('click');        
+    });
+  });
+
+
+div#draw(style='float:left; border:1px solid black; auto-flow:auto')
+div#main(style='float:left;width:200;height:300;border:2px dashed') 
+    div#data
+    button#req1 request_chart1
+    button#req2 request_chart2
+    br
+
+    input#chart(type=text, value='ch_3')
+    input#key(type=text, value=3)
+    input#val(value=5)
+    button#append_point append_point
+    input#range(type=text, value=3)
+    br
+
+    button#append_random  random_value
+    button#append_random2 random_chart
+    br
+
+    input(type='radio', name='type', value='rect', checked=true)
+    text rect
+    input(type='radio', name='type', value='ellipse')
+    text ellipse
+    input(type='radio', name='type', value='circle') 
+    text circle
+    input(type='radio', name='type', value='line')
+    text line
+    input(type='radio', name='type', value='polyline')
+    text polyline
+    input(type='radio', name='type', value='polygon')
+    text polygon
+    br
+
+    button#clear clear    
+    button#draw_chart draw_chart
+    div#mouse mouse_position
+div#udp(style='float:left;width:300;height:400;border:2px dashed') 
+    input#udp(type='text', size=10, placeholder='data for test', value='udp_test')
+    button#udp_out udp_out
+    button#udp_object udp_object
+    hr
+    input#tcp_host(placeholder='host', value='localhost')
+    input#tcp_port(placeholder='port', value='3000')
+    input#tcp_data(placeholder='data for test', value='GET / HTTP/1.1')
+    button#tcp_out tcp_out
+    hr
+    textarea#editor(width=300, style="width: 100%; height: 100px;")
+    button#show_text  show_text  

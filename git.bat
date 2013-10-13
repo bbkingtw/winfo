@@ -1,0 +1,1 @@
+c:\progra~1\git\bin\git %1 %2 %3 %4 %5
