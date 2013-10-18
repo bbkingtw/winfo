@@ -162,7 +162,9 @@ function tcp_out(HOST, PORT, data) {
   });
 }
 
-app=init_http(3000);
+PORT=80;
+app=init_http(PORT);
+console.log('listen at '+PORT);
 
 app.get('/',function(req,res){
   res.render('winfo.jade');          

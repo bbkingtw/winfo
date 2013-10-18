@@ -6,11 +6,19 @@
      border:2px dashed #003366; background-color:#ccccff, overflow:auto
   }
 
+
 //script(type="text/javascript", src="./nicEdit.js")
+<link rel="stylesheet" type="text/css" href="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/css/jquery.dataTables.css">
+<script type="text/javascript" charset="utf8" src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.8.2.min.js"></script> 
+<script type="text/javascript" charset="utf8" src="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/jquery.dataTables.min.js"></script>
+
 
 script(type='text/javascript', src="./socket.io/socket.io.js")
 script(type='text/javascript', src="http://d3js.org/d3.v3.min.js")
-script(type='text/javascript', src='http://code.jquery.com/jquery-latest.min.js')
+//script(type='text/javascript', src='http://code.jquery.com/jquery-latest.min.js')
+
+script(type='text/javascript', src='./wtable.js')
+
 script(type='text/javascript').
   charts=[];
   svg_ww=150;
@@ -187,6 +195,7 @@ script(type='text/javascript').
     }
   }
 
+
   $(function(){
     if(bEditor) 
       bkLib.onDomLoaded(function() { nicEditors.allTextAreas() });
@@ -279,12 +288,42 @@ script(type='text/javascript').
          socket.emit('append_chart_data',{chart:c,key:k,val:v});
        }
     });
+
     $('#append_random2').click(function(){
        $('input#chart').val('ch_'+Math.floor(Math.random()*11));
        $('#append_random').trigger('click');        
-    });
-  });
+    });    
+    
 
+    function fnClickAddRow(table_id) {      
+      $(table_id).dataTable().fnAddData( [
+        Math.ceil(Math.random()*10),
+        Math.ceil(Math.random()*50)
+      ] ); 
+    }
+
+    
+    bInit=false
+    $('#tappend').click(function(){
+      fnClickAddRow('#example')
+    })
+
+    $('#test_wtable').click(function(){      
+      prepare_grid($('input'), function(data){          
+        $(data).prependTo($('body')).attr('id','x').addClass('block')
+        $('#x').dataTable(
+          { 
+            "bAutoWidth": false,
+            "sPaginationType":"full_numbers","bPaginate":true,
+            "oLanguage": {
+              "sLengthMenu": "顯示 _MENU_ 筆記錄",
+              "sZeroRecords": "無符合資料",
+              "sInfo": "目前記錄：_START_ 至 _END_, 總筆數：_TOTAL_",
+          }          
+        }).fnAdjustColumnSizing();
+      })
+    });
+  });  
 
 div#draw(style='float:left; border:1px solid black; auto-flow:auto')
 div#main(style='float:left;width:200;height:300;border:2px dashed') 
@@ -321,7 +360,7 @@ div#main(style='float:left;width:200;height:300;border:2px dashed')
     button#clear clear    
     button#draw_chart draw_chart
     div#mouse mouse_position
-div#udp(style='float:left;width:300;height:400;border:2px dashed') 
+div#udp(style='float:left;width:500;height:500;border:2px dashed') 
     input#udp(type='text', size=10, placeholder='data for test', value='udp_test')
     button#udp_out udp_out
     button#udp_object udp_object
@@ -332,4 +371,16 @@ div#udp(style='float:left;width:300;height:400;border:2px dashed')
     button#tcp_out tcp_out
     hr
     textarea#editor(width=300, style="width: 100%; height: 100px;")
-    button#show_text  show_text  
+    button#show_text show_text  
+    button#test_wtable test_wtable
+    button#tappend table append
+
+    table#example.example    
+      thead
+        tr
+          td col1
+          td col2      
+      tbody
+        tr
+          td 1
+          td 2
