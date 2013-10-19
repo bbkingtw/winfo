@@ -5,6 +5,17 @@ wtable={
 	'prepare_grid': prepare_grid	
 }
 
+function render_table(){
+	alert(charts.length)
+    charts.forEach(
+    	function() {
+    		alert($(this))
+    		//$('#'+sChart).append($('<div>').text('k='+d.key+',val='+d.val));      
+    	}
+    	//alert(i)    
+    )
+}
+
 function prepare_json(obj, callback) {
 	var ar=[]
 	obj.each(function(data){						

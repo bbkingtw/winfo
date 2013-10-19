@@ -33,8 +33,35 @@ function init_http(PORT) {
   });
 
   io.sockets.on('connection', function (socket) {
-    clients.push(socket);
+    clients.push(socket);    
 
+    socket.on('request_file', function (sFile) {      
+      var fs=require('fs')
+      var file=__dirname+'/'+sFile;
+
+      fs.readFile(file, 'utf8', function(err,data){
+        if (err) {
+          console.log('error:'+err)
+          return
+        }
+        socket.emit('data_file', {data:data, filename:sFile})
+      })      
+    })
+
+    socket.on('save_file', function(obj) {
+      sFile=obj.filename
+      data=obj.data
+
+      var fs=require('fs')
+      var file=__dirname+'/'+sFile;
+
+      fs.writeFile(file, data, function(err){
+        if (err) 
+          news('file save fail='+err+' on '+sFile);
+        else
+          news('file save success');
+      })      
+    })
     socket.on('request_chart', function (data) {
        //socket.emit('news',data);
        switch(data) {
@@ -148,7 +175,8 @@ function tcp_out(HOST, PORT, data) {
   });
 
   // Add a 'data' event handler for the client socket
-  // data is what the server sent to this socket
+  // data is what the server sent to this socket  
+    
   client.on('data', function(data) {    
     console.log('[tcp]==>DATA: ' + data);
     // Close the client socket completely
