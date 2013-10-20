@@ -35,6 +35,21 @@ function init_http(PORT) {
   io.sockets.on('connection', function (socket) {
     clients.push(socket);    
 
+    /*setInterval(function(){
+      socket.emit('append_random_point',1)      
+      //news(1);//io.sockets.emit('news',1)
+    },3000)*/
+
+    socket.on('reload', function(data){            
+      //news(data)
+      if (data=='single')
+        process.exit();
+      else {      
+        console.log('prepare reload_all')
+        process.send({cmd:'reload_all'});
+      }
+    })
+
     socket.on('request_file', function (sFile) {      
       var fs=require('fs')
       var file=__dirname+'/'+sFile;
@@ -85,11 +100,21 @@ function init_http(PORT) {
 
     socket.on('append_chart_data', function(obj){
        console.log('append_chart_data'+JSON.stringify(obj));
-       append_chart_data(obj.chart, obj.key, obj.val);
+       append_chart_data(obj.chart, obj.key, obj.val, socket);
     });
   });
 
   return app;
+}
+
+function removeWorkerFromListByPID(pid) {
+ var counter = -1;
+ workerList.forEach(function(worker){
+    ++counter;
+    if (worker.pid === pid) {
+      workerList.splice(counter, 1);
+    }
+  });
 }
 
 function news(s) {
@@ -99,12 +124,15 @@ function emit(event, value) {
   io.sockets.emit(event,value);
 }
 
-function append_chart_data(sChart, sKey, sVal) {
+function append_chart_data(sChart, sKey, sVal, socket) {
   if (!charts[sChart]) charts[sChart]=[];
   xdata={ chart:sChart, key:sKey, val:sVal };  
   //news(xdata);
   charts[sChart].push(xdata);
-  emit('update_chart',xdata);//charts[sChart]);//xdata);
+  if (socket)
+    socket.emit('update_chart',xdata);
+  else
+    emit('update_chart',xdata);//charts[sChart]);//xdata);
 }
 
 function notify_chart(obj) {
@@ -190,13 +218,104 @@ function tcp_out(HOST, PORT, data) {
   });
 }
 
-PORT=80;
-app=init_http(PORT);
-console.log('listen at '+PORT);
+function removeA(arr) {
+    var what, a = arguments, L = a.length, ax;
+    while (L > 1 && arr.length) {
+        what = a[--L];
+        while ((ax= arr.indexOf(what)) !== -1) {
+            arr.splice(ax, 1);
+        }
+    }
+    return arr;
+}
 
-app.get('/',function(req,res){
-  res.render('winfo.jade');          
-});
+function kill_all_fork() {
+  workers.forEach(function(w){
+    w.kill()        
+  })  
+}
 
-start_udp_server(11111);
-udp_out(remote_server, '11111', 'test');
+numReqs=0
+var cluster = require('cluster'); 
+console.log('master is '+process.pid)  
+if (1==0){
+//if (cluster.isMaster) {  
+  console.log('master is '+process.pid)  
+  /*
+  setInterval(function() {
+    console.log("numReqs =", numReqs);
+  }, 1000);
+*/
+
+  function messageHandler(msg) {
+    console.log('===============>'+msg)
+    if (msg.cmd && msg.cmd == 'notifyRequest') {
+      numReqs += 1;
+    }
+  }
+  
+  function append_worker(){
+    var worker_process=cluster.fork()
+    console.log(worker_process.process.pid+' is callup for service')
+    workers.push(worker_process)
+    return worker_process
+  } 
+
+  workers=[]  
+  var numCPUs=require('os').cpus().length; numCPUs=1
+  for (var i=0; i<numCPUs; i++) append_worker()
+
+  cluster.on('exit',function(worker,code,signal){    
+    removeA(workers, worker)
+    console.log('worker '+worker.process.pid+' died('+code+')')
+    append_worker()        
+  })  
+}
+else {    
+  console.log('====================child '+process.pid+' is going')
+  //process.send({ cmd: 'notifyRequest' });
+  //process.send({cmd:'reload_all'})
+
+  function messageHandler(msg) {
+    console.log(msg)
+    if (msg.cmd && msg.cmd == 'reload_all') {
+      numReqs += 1;
+    }   
+  }
+
+  process.on('message',function(msg){
+    console.log('c=====================>'+msg);
+    process.send({cmd:'reload_all'})
+    /*
+    news('client')
+
+    console.log('========>'+msg)
+    if (msg='reload_all') {
+       console.log('reload_all')          
+       process.send('reload_all')
+    }*/
+  })
+  /*
+  require('http').Server(function(req,res){
+    res.writeHead(200)
+    //res.end('=>hello\n')    
+    //for (var i=1; i<10000; i++) {          }
+    s='<meta http-equiv="refresh" content="0; url=/">';
+    res.end('<head>'+s+'</head>');//'=>hello\n')
+    //res.end('this is '+process.pid)
+    console.log('process by '+process.pid)
+    process.send({cmd:123})
+  }).listen(80)
+  */
+  PORT=80;
+  app=init_http(PORT);
+
+  console.log('listen at '+PORT);
+
+  app.get('/',function(req,res){
+    res.render('winfo.jade');          
+  });  
+
+  start_udp_server(11111)
+  //process.send({ cmd: 'notifyRequest' });
+}  

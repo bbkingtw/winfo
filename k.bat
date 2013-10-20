@@ -1,1 +1,1 @@
-node winfo.js
+node boot

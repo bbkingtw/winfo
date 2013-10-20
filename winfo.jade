@@ -1,4 +1,4 @@
-﻿style
+style
   .block {
      float:left;
      width:180;
@@ -12,6 +12,9 @@ script(type="text/javascript", src="./nicEdit.js")
 <script type="text/javascript" charset="utf8" src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.8.2.min.js"></script> 
 <script type="text/javascript" charset="utf8" src="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/jquery.dataTables.min.js"></script>
 
+link(rel='stylesheet', href='http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css')
+<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+<script src='http://layout.jquery-dev.net/lib/js/jquery.layout-latest.js'></script>
 
 script(type='text/javascript', src="./socket.io/socket.io.js")
 script(type='text/javascript', src="http://d3js.org/d3.v3.min.js")
@@ -35,7 +38,9 @@ script(type='text/javascript').
   
   function init() {           
     $('#append_random2').trigger('click');  
-    $('#show_file').trigger('click')
+    $('#append_random2').trigger('click');  
+    $('#append_random2').trigger('click');  
+    //$('#show_file').trigger('click')
   }
 
   $(function() {
@@ -69,6 +74,33 @@ script(type='text/javascript').
       alert(2)
     })
   })  
+
+  socket.on('clear', function(){
+    $('#clear').trigger('click')
+  })
+
+  function append_random_point(x) {
+    for (var i=0; i<x; i++) {
+      var c=$('input#chart').val();
+      var k=Math.floor(Math.random()*xrandom);//svg_ww);
+      var v=Math.floor(Math.random()*xrandom);//svg_hh-10);
+      socket.emit('append_chart_data',{chart:c,key:k,val:v});
+    }
+  }
+
+  function append_time_point(x) {
+    for (var i=0; i<x; i++) {
+      var c=$('input#chart').val();
+      var k=Date().now();//Math.floor(Math.random()*xrandom);//svg_ww);
+      var v=Math.floor(Math.random()*xrandom);//svg_hh-10);
+      socket.emit('append_chart_data',{chart:c,key:k,val:v});
+    } 
+  }
+
+  socket.on('append_random_point', function(data){
+    //log(2)
+    append_random_point(data)
+  })
 
   socket.on('response_chart', function (data) {
     log(data);
@@ -114,10 +146,12 @@ script(type='text/javascript').
 
   function prepareSVG(sChart,parent) {
     if ($('svg#'+sChart).length==0) {
-      var svg=parent
-       .append('svg:svg').attr('class','block')
-       .style('stroke','red').style('float','top')
-       .attr('id',sChart).attr('width',svg_ww).attr('height',svg_hh);      
+      var svg=
+        parent        
+        .append('svg:svg')        
+        .attr('class','block')
+        .style('stroke','red').style('float','top')
+        .attr('id',sChart).attr('width',svg_ww).attr('height',svg_hh)
     }
     return d3.select('svg#'+sChart);
   }
@@ -168,10 +202,21 @@ script(type='text/javascript').
     var margin = {top: 0, right: 0, bottom: 50, left: 30};
     
     var p=50
-    var svg=prepareSVG(sChart, sContainer); //要留著
-    
-    
-    svg.selectAll(stype).data(charts[sChart]).enter()
+    //var svg1=prepareSVG(sChart, sContainer); //要留著
+    //render_svg(svg1)
+
+    if ($('#tabs>div#tab_'+sChart).length==0) {
+      $('<div></div>').attr('id','tab_'+sChart).appendTo($('#tabs'))
+      $('<li><a href="#tab_'+sChart+'">'+sChart+'</a></li>').appendTo('#tabs>ul')
+    }
+
+    //$('#tabs').tabs()
+
+    var svg2=prepareSVG(sChart, d3.select('#tab_'+sChart)); //要留著    
+    render_svg(svg2)
+
+    function render_svg(svg) {
+      svg.selectAll(stype).data(charts[sChart]).enter()
       .append('svg:'+stype)
       .attr('width',10).attr('height',10) //rect
       .attr('r',5)			  //circle
@@ -198,6 +243,7 @@ script(type='text/javascript').
          update_chart(sChart);
       })
       .exit().remove()    
+    }
   }
 
   function xv(s) {
@@ -302,20 +348,23 @@ script(type='text/javascript').
       alert(s)
     })
 
-    $('#append_point').click(function(){
-       var c=$('input#chart').val();
-       var k=$('#key').val();
-       var v=$('#val').val();
-       socket.emit('append_chart_data',{chart:c,key:k,val:v});
-    });
+
+    $('#append_point').click(function(){             
+      var c=$('input#chart').val();
+      var k=$('#key').val();   
+      var v=$('#val').val();       
+      socket.emit('append_chart_data',{chart:c,key:k,val:v});
+    });    
+
+    $('#append_tpoint').click(function(){             
+      var c=$('input#chart').val();      
+      var k=sNow();
+      var v=$('#val').val();       
+      socket.emit('append_chart_data',{chart:c,key:k,val:v});
+    });  
 
     $('#append_random').click(function(){
-       for (var i=0; i<$('#range').val(); i++) {
-         var c=$('input#chart').val();
-         var k=Math.floor(Math.random()*xrandom);//svg_ww);
-         var v=Math.floor(Math.random()*xrandom);//svg_hh-10);
-         socket.emit('append_chart_data',{chart:c,key:k,val:v});
-       }
+       append_random_point($('#range').val())
     });
 
     $('#append_random2').click(function(){
@@ -337,8 +386,18 @@ script(type='text/javascript').
       fnClickAddRow('#example')
     })
 
+    $('#reload_all').click(function(){
+      socket.emit('reload','all')
+    })
+
+    $('#reload').click(function(){
+      socket.emit('reload','single')
+    })
+
     $('#show_file').click(function(){    
-      var sfile=prompt('filename','pls enter filename')
+      sDefault='pls enter filename'
+      sDefault='winfo.jade'
+      var sfile=prompt('filename',sDefault)
       if (sfile!='pls enter filename')
         request_file(sfile);
     })
@@ -364,6 +423,9 @@ script(type='text/javascript').
     init()
   });  
 
+div#tabs(style='float:top; height:250; border:2px solid black; auto-flow:auto')
+  ul  
+
 div#draw(style='float:left; border:1px solid black; auto-flow:auto')
 div#main(style='float:left;width:200;height:300;border:2px dashed') 
     div#data
@@ -380,6 +442,9 @@ div#main(style='float:left;width:200;height:300;border:2px dashed')
 
     button#append_random  random_value
     button#append_random2 random_chart
+    br
+
+    button#append_tpoint append_timepoint
     br
 
     input(type='radio', name='type', value='rect', checked=true)
@@ -414,6 +479,9 @@ div#udp(style='float:left;width:500;height:500;border:2px dashed')
     button#test_wtable test_wtable
     button#tappend table append
     button#show_file show_file
+    br  
+    button#reload reload
+    button#reload_all reload_all
 
     table#example.example    
       thead
