@@ -2,19 +2,23 @@ style
   .block {
      float:left;
      width:180;
-     //height:100;
      border:2px dashed #003366; background-color:#ccccff, overflow:auto
   }
 
 
-script(type="text/javascript", src="./nicEdit.js")
+<!-- DataTables CSS -->
 <link rel="stylesheet" type="text/css" href="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/css/jquery.dataTables.css">
-<script type="text/javascript" charset="utf8" src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.8.2.min.js"></script> 
+ 
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.8.2.min.js"></script>
+ 
+<!-- DataTables -->
 <script type="text/javascript" charset="utf8" src="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/jquery.dataTables.min.js"></script>
 
-link(rel='stylesheet', href='http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css')
-<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
-<script src='http://layout.jquery-dev.net/lib/js/jquery.layout-latest.js'></script>
+
+//link(rel='stylesheet', href='http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css')
+//<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+//<script src='http://layout.jquery-dev.net/lib/js/jquery.layout-latest.js'></script>
 
 script(type='text/javascript', src="./socket.io/socket.io.js")
 script(type='text/javascript', src="http://d3js.org/d3.v3.min.js")
@@ -24,6 +28,33 @@ script(type='text/javascript', src='./wtable.js')
 script(type='text/javascript', src='./utils.js')
 
 script(type='text/javascript').
+  function clear(){$('div').remove(); $('table').remove()}
+  function hh(s){
+    for (var x=1; x<100; x++) {
+      s=s.replace('x', Math.ceil(Math.random()*10000))
+    }
+    return s;
+  }
+  function data2() {  
+    var x='<tr><th>x</th><th>x</th><th>x</th><th>x</th></tr>'
+    var h=hh(x)
+    var b=''
+    var r=x.replace('th','td')
+    for (var i=1; i<50; i++) b=b+hh(r)
+    return '<table border=1><thead>'+h+'</thead><tbody>'+b+'</tbody></table>'
+  }
+
+  function addx(){
+    $(data2()).prependTo($('body')).dataTable(
+      {
+        "width":"50%",
+        "sScrollX": "30%",
+        //"sScrollXInner": "50%",
+        "bScrollCollapse": true
+      }
+    )
+  }  
+
   charts=[];
   svg_ww=150;
   svg_hh=150;
@@ -40,7 +71,7 @@ script(type='text/javascript').
     $('#append_random2').trigger('click');  
     $('#append_random2').trigger('click');  
     $('#append_random2').trigger('click');  
-    //$('#show_file').trigger('click')
+    //$('#show_file').trigger('click')    
   }
 
   $(function() {
